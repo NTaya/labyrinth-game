@@ -242,6 +242,16 @@ class Item:
         self.name += COLORS["reset"]
         return self.name
 
+    def print_description(self, guidewatch_lvl):
+        name = (
+            "\u001b[0m" + " " + self.name.__str__()[5:]
+            if guidewatch_lvl < 5
+            else self.name.__str__()
+        )
+        print(f"It's {name}.")
+        if guidewatch_lvl >= 20:
+            print(f"Attributes: {self.attributes}.")
+
     def __str__(self):
         return self.name
 

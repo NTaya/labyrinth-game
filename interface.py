@@ -2,6 +2,7 @@ import keyboard
 import itertools
 import sys
 import pickle
+
 from inventory import inventory_playground
 from crafting import crafting_playground
 from maps import map_playground
@@ -31,6 +32,7 @@ def info_inventory_playground():
     print("Currently, you can't move items between backpacks,")
     print("but you can equip-unequip items to mimic that.")
     print("It will move to the first free backpack.")
+    print()
     inventory_playground()
 
 
