@@ -11,16 +11,7 @@ kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
 
 class Menu:
     def __init__(self, title_text, options, param_to_save=None):
-        if isinstance(options, list):
-            questions = [
-                inquirer.List(
-                    title_text,
-                    message=title_text,
-                    choices=options,
-                ),
-            ]
-            self.answer = inquirer.prompt(questions)[title_text]
-        elif isinstance(options, dict):
+        if isinstance(options, dict):
             questions = [
                 inquirer.List(
                     title_text,
@@ -29,3 +20,21 @@ class Menu:
                 ),
             ]
             self.answer = options[inquirer.prompt(questions)[title_text]]
+        elif isinstance(options, list):
+            questions = [
+                inquirer.List(
+                    title_text,
+                    message=title_text,
+                    choices=options,
+                ),
+            ]
+            self.answer = inquirer.prompt(questions)[title_text]
+        else:
+            questions = [
+                inquirer.List(
+                    title_text,
+                    message=title_text,
+                    choices=options,
+                ),
+            ]
+            self.answer = inquirer.prompt(questions)[title_text]
