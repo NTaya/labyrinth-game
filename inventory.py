@@ -9,6 +9,7 @@ from util import COLORS, func_wrapper, hide_color_if_low_lvl
 from menu import Menu
 from numpy import random
 import typing
+import keyboard
 
 
 full_items = {
@@ -297,11 +298,22 @@ class Backpack(Item, Inventory):
         # item = self
         # Item is as-item representation
         # self is as-inventory representation
+        item_for_desc = item
+        sorting = None
         while True:
-            item.print_description(inventory.guidewatch.level)
+            item_for_desc.print_description(inventory.guidewatch.level)
             self.show_inventory()
+            # text = "r: sort by rarity, t: sort by type, y: sort by name"
+            text = ""
             answers_to_item = {}
             options = []
+
+            sort_options = [
+                COLORS["cyan"] + "Sort by type" + COLORS["reset"],
+                COLORS["cyan"] + "Sort by name" + COLORS["reset"],
+            ]
+            options.extend(sort_options)
+
             if self.empty_slots != self.total_slots:
                 for item_type, item in self.items.items():
                     answer_text = item
@@ -309,13 +321,24 @@ class Backpack(Item, Inventory):
                     if answer_text != COLORS["reset"] + " None":
                         options.append(answer_text)
                         answers_to_item[answer_text] = item
+            if sorting == "type":
+                options.sort(
+                    key=lambda x: str(answers_to_item[x].type_of.meta_type)
+                    if x not in sort_options
+                    else "",
+                )
+            elif sorting == "name":
+                options.sort(key=lambda x: x[5:] if x not in sort_options else "")
             options.append("Back  ")
-            text = "r: sort by rarity, t: sort by type, y: sort by name"
             chosen = Menu(text, options).answer
-            if chosen != "Back  ":
-                self.open_item(answers_to_item[chosen])
-            else:
+            if chosen == COLORS["cyan"] + "Sort by type" + COLORS["reset"]:
+                sorting = "type"
+            elif chosen == COLORS["cyan"] + "Sort by name" + COLORS["reset"]:
+                sorting = "name"
+            elif chosen == "Back  ":
                 break
+            else:
+                self.open_item(answers_to_item[chosen])
 
     def item_menu(self, item):
         while True:
@@ -412,7 +435,10 @@ def inventory_playground():
 
         type_of_gen_item = random.choice(general_attributes)
         # type_of_gen_item = GeneralAttribute("materia")
-        generated_item = Item(type_of=type_of_gen_item)
+        if str(type_of_gen_item) == "backpack":
+            generated_item = Backpack()
+        else:
+            generated_item = Item(type_of=type_of_gen_item)
 
         print(
             COLORS["cyan"],
