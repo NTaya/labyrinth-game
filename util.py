@@ -1,3 +1,6 @@
+# -- GENERAL --
+
+
 COLORS = {
     "black": "\u001b[30m",
     "red": "\u001b[31m",
@@ -25,3 +28,14 @@ def flatten(S):
     if isinstance(S[0], list) or isinstance(S[0], tuple):
         return flatten(S[0]) + flatten(S[1:])
     return S[:1] + flatten(S[1:])
+
+
+# -- ITEM --
+
+
+def hide_color_if_low_lvl(item_name, inventory):
+    return (
+        COLORS["reset"] + " " + str(item_name)[5:]
+        if inventory.guidewatch.level < 5
+        else str(item_name)
+    )

@@ -44,7 +44,7 @@ class GeneralAttribute(Attribute):
         "water": ("Drinking Bottle", "Water Bottle"),
         "potion": ("Potion", "Mysterious Bottle"),
         "scroll": ("Scroll", "Parchment"),
-        "materia": ("Materia", "Orb"),
+        "materia": ("Materia", "Tiny Orb"),
         "backpack": ("Backpack", "Bag"),
         "other": ("Other", "Other"),
     }
@@ -53,30 +53,6 @@ class GeneralAttribute(Attribute):
         super().__init__(name)
         self.type_of = name
         self.meta_type = self.type_to_meta_type[self.type_of]
-
-
-class FunctionalAttribute(Attribute):
-    prefixes = {
-        "fire": ("Fire", "Flaming", "Fiery"),
-        "ice": ("Cold", "Freezing", "Ice", "Winter"),
-        "death": ("Deathly", "Blacked"),
-        "cure": ("Healing", "Green"),
-        "defense": ("Defensive", "Protecting", "Protective"),
-        "speed": ("Quick", "Swift"),
-        "arcane": ("Arcane", "Cabalistic"),
-    }
-    suffixes = {
-        "fire": ("Ablaze", "Aflame", "of Fire"),
-        "ice": ("of Cold", "of Ice", "of Winter"),
-        "death": ("of Death", "of Destruction", "of the Deathbringer"),
-        "cure": ("of Life", "of Healing"),
-        "defense": ("That Defends", "That Protects"),
-        "speed": ("of Swiftness", "of Quickness"),
-        "arcane": ("of Occult", "of the Arcane"),
-    }
-
-    def __init__(self, name):
-        super().__init__(name)
 
 
 general_attributes = [
@@ -102,12 +78,47 @@ general_attributes = [
 ]
 
 
-functional_attributes = [
-    FunctionalAttribute(item)
-    for item in ["fire", "ice", "death", "cure", "defense", "speed", "arcane"]
-]
+class FunctionalAttribute(Attribute):
+    prefixes = {
+        "fire": ("Fire", "Flaming", "Fiery"),
+        "ice": ("Cold", "Freezing", "Ice", "Winter"),
+        "death": ("Deathly", "Blacked"),
+        "cure": ("Healing", "Green"),
+        "defense": ("Defensive", "Protecting", "Protective"),
+        "speed": ("Quick", "Swift"),
+        "arcane": ("Arcane", "Cabalistic"),
+        "attack": ("Bloodthirsty", "Battle-worn", "Attacking", "Striking"),
+    }
+    suffixes = {
+        "fire": ("Ablaze", "Aflame", "of Fire"),
+        "ice": ("of Cold", "of Ice", "of Winter"),
+        "death": ("of Death", "of Destruction", "of the Deathbringer"),
+        "cure": ("of Life", "of Healing"),
+        "defense": ("That Defends", "That Protects"),
+        "speed": ("of Swiftness", "of Quickness"),
+        "arcane": ("of Occult", "of the Arcane"),
+        "attack": ("of the Battle", "of Aggression"),
+    }
 
-functional_attributes = ["fire", "ice", "death", "cure", "defense", "speed", "arcane"]
+    def __init__(self, name):
+        super().__init__(name)
+
+
+# functional_attributes = [
+#     FunctionalAttribute(item)
+#     for item in ["fire", "ice", "death", "cure", "defense", "speed", "arcane"]
+# ]
+
+functional_attributes = [
+    "fire",
+    "ice",
+    "death",
+    "cure",
+    "defense",
+    "speed",
+    "arcane",
+    "attack",
+]
 
 
 class Item:
@@ -248,7 +259,8 @@ class Item:
             if guidewatch_lvl < 5
             else self.name.__str__()
         )
-        print(f"It's {name}.")
+        article = "an" if name[5].lower() in ["a", "o", "u", "e", "i"] else "a"
+        print(f"It's {article} {name}.")
         if guidewatch_lvl >= 20:
             print(f"Attributes: {self.attributes}.")
 

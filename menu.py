@@ -20,15 +20,8 @@ class Menu:
                 ),
             ]
             self.answer = options[inquirer.prompt(questions)[title_text]]
-        elif isinstance(options, list):
-            questions = [
-                inquirer.List(
-                    title_text,
-                    message=title_text,
-                    choices=options,
-                ),
-            ]
-            self.answer = inquirer.prompt(questions)[title_text]
+            if callable(self.answer):
+                self.answer = self.answer()
         else:
             questions = [
                 inquirer.List(

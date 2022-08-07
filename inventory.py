@@ -1,5 +1,5 @@
 from items import Item, Guidewatch, GeneralAttribute, functional_attributes
-from util import COLORS, func_wrapper
+from util import COLORS, func_wrapper, hide_color_if_low_lvl
 from menu import Menu
 from numpy import random
 import typing
@@ -90,11 +90,12 @@ Materia: {self.items["materia"]}
         return text
 
     def equip_item(self, item):
-        """Return the item if equipment failed,
+        """Returns the item if equipment failed,
         otherwise return None."""
         if str(item.type_of) == "materia":
             if self.items["materia"] == [""]:
-                self.items["materia"].pop(0)
+                self.items["materia"][0] = item
+                return None
             self.items["materia"].append(item)
             return None
 
@@ -121,21 +122,36 @@ Materia: {self.items["materia"]}
         return None
 
     def unequip_item(self, item):
-        if (
+        if not (
             self.items["backpacks"][0] == ""
             or sum([x.empty_slots for x in self.items["backpacks"]]) == 0
         ):
-            print("No suitable backpacks, dropping item.")
-            self.drop_item(item)
-        else:
             for i in self.items["backpacks"]:
                 if i.empty_slots > 0:
                     i.add_item(item)
+                    self.remove_item(item)
                     break
+        else:
+            print(
+                COLORS["red"]
+                + "No suitable backpacks, dropping item."
+                + COLORS["reset"]
+            )
+            self.drop_item(item)
         return self
 
     def drop_item(self, item):
         # TODO: floor integration
+        dropped_item = self.remove_item(item)
+
+    def remove_item(self, item):
+        """Shouldn't be called from outside,
+        use drop_item() or unequip_item() instead.
+        """
+        reverse_items = {
+            v: k for k, v in self.items.items() if k not in forbidden_types
+        }
+        item = reverse_items[item]
         self.items[item] = COLORS["reset"] + " None"
         return item
 
@@ -159,36 +175,26 @@ Materia: {self.items["materia"]}
             else:
                 self.items[i] = COLORS["reset"] + " None"
 
-    # -- Utility functions for item-opening -- #
-    def prelim_open_item(item):
-        def unequip_item():
-            unequip_item(item)
-            return
-
-        def drop_item():
-            drop_item(item)
-            return
-
-        def back():
-            return
-
     def open_item(self, item):
-        item.print_description(self.guidewatch.level)
-        # if str(item.type_of) == "backpack":
-        #     item.open_bag()
-        # else:
-        #     text = ""
-        #     opening_wrapper = func_wrapper(func, val)
-        #     options = {
-        #         "Unequip Item  ": unequip_item,
-        #         "Drop Item  ": drop_item,
-        #         "Back  ": back,
-        #     }
-        #     # item = Item(sort_of="backpack")
-        #     while not chosen:
-        #         chosen = Menu(text, options)
-        #     options[chosen]()
-        #     inventory_playground()
+        # Just in case, you shouldn't normally be able to call it with a bag
+        if str(item.type_of) == "backpack":
+            item.open_bag()
+        else:
+            inv.item_menu(item)
+
+    def item_menu(self, item):
+        while True:
+            item.print_description(self.guidewatch.level)
+            text = ""
+            options = ["Unequip Item  ", "Drop Item  ", "Back  "]
+            close_menu = ["Unequip Item  ", "Drop Item  ", "Back  "]
+            answer = Menu(text, options).answer
+            if answer == "Unequip Item  ":
+                self.unequip_item(item)
+            elif answer == "Drop Item ":
+                self.drop_item(item)
+            if answer in close_menu:
+                break
 
 
 class Backpack(Item):
@@ -218,8 +224,12 @@ class Backpack(Item):
             self.name = self.get_name()
 
     def show_inventory(self):
-        text = ",\n".join([items.keys()])
-        return text
+        text = "\n* ".join(
+            list([hide_color_if_low_lvl(i, inv) for i in self.items.keys()])
+        )
+        text = "* " + text
+        print(text)
+        # return text
 
     def add_item(self, item: Item):
         if str(item.type_of) == "backpack":
@@ -244,6 +254,7 @@ class Backpack(Item):
         # Item is as-item representation
         # self is as-inventory representation
         item.print_description(inventory.guidewatch.level)
+        self.show_inventory()
 
     def __str__(self):
         return f"{self.name}: {self.total_slots - self.empty_slots}/{self.total_slots}"
@@ -273,12 +284,6 @@ def back():
 
 
 # -- util --
-def hide_color_if_low_lvl(item_name, inventory):
-    return (
-        COLORS["reset"] + " " + str(item_name)[5:]
-        if inventory.guidewatch.level < 5
-        else str(item_name)
-    )
 
 
 inv = Inventory()
@@ -355,7 +360,7 @@ def inventory_playground():
                     bag = answers_to_bag[bag_chosen]
                     bag.open_bag(bag, inv)
 
-        elif chosen == "Take a look at Materia ":
+        elif chosen == "Take a look at Materia  ":
             # same, new menu
             if inv.items["materia"] == [""]:
                 print(COLORS["red"] + "Nothing to look at (yet)!" + COLORS["reset"])
