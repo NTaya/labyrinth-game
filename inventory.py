@@ -1,4 +1,10 @@
-from items import Item, Guidewatch, GeneralAttribute, functional_attributes
+from items import (
+    Item,
+    Guidewatch,
+    GeneralAttribute,
+    general_attributes,
+    functional_attributes,
+)
 from util import COLORS, func_wrapper, hide_color_if_low_lvl
 from menu import Menu
 from numpy import random
@@ -19,6 +25,9 @@ full_items = {
     "water": "right_pocket",
     "backpack": "backpacks",
     "materia": "materia",
+    "potion": None,
+    "scroll": None,
+    "other": None,
 }
 
 reverse_full_items = {
@@ -44,8 +53,8 @@ class Inventory:
             "boots": COLORS["reset"] + " None",
             "left_pocket": COLORS["reset"] + " None",
             "right_pocket": COLORS["reset"] + " None",
-            "backpacks": [""],
-            "materia": [""],
+            "backpacks": ["None"],
+            "materia": ["None"],
             # "guidewatch": f"guidewatch [{self.guidewatch.level}]",
         }
 
@@ -58,7 +67,7 @@ class Inventory:
         for item in self.items:
             if item in forbidden_types:
                 item_contents = self.items[item]
-                if item_contents != [""]:
+                if item_contents != ["None"]:
                     for inner_item_index in range(len(item_contents)):
                         val = item_contents[inner_item_index]
                         items_list[item] = [None for i in range(len(item_contents))]
@@ -69,12 +78,11 @@ class Inventory:
                 val = self.items[item]
                 # delete color if the level of guidewatch is insufficient
                 items_list[item] = hide_color_if_low_lvl(val, self)
-        # print(items_list)
-        for key, value in items_list.items():
-            if isinstance(value, list):
-                print(key, *value)
-            else:
-                print(key, value)
+        # for key, value in items_list.items():
+        #     if isinstance(value, list):
+        #         print(key, *value)
+        #     else:
+        #         print(key, value)
 
         text = f"""Guidewatch lvl: {self.guidewatch.level}
 Hands: {items_list["hands"]}
@@ -84,53 +92,75 @@ Pants: {items_list["pants"]}
 Boots: {items_list["boots"]}
 Food pocket: {items_list["left_pocket"]}
 Water pocket: {items_list["right_pocket"]}
-Backpacks: {self.items["backpacks"]}
-Materia: {self.items["materia"]}
 """
-        return text
+        print(text, end="")
+        print(
+            "Backpacks: ",
+            *[hide_color_if_low_lvl(x, self) for x in self.items["backpacks"]],
+        )
+        print("Materia: ", end="")
+
+        print(
+            *[hide_color_if_low_lvl(x, self) for x in self.items["materia"]], sep=", "
+        )
+        # return text
 
     def equip_item(self, item):
         """Returns the item if equipment failed,
         otherwise return None."""
         if str(item.type_of) == "materia":
-            if self.items["materia"] == [""]:
+            if self.items["materia"] == ["None"]:
                 self.items["materia"][0] = item
                 return None
             self.items["materia"].append(item)
+            print("DEBUG: ", self.items["materia"])
             return None
 
         if str(item.type_of) == "backpack":
-            if self.items["backpacks"] == [""]:
+            if self.items["backpacks"] == ["None"]:
                 self.items["backpacks"][0] = item
                 return None
-            elif len(self.items["backpacks"] >= 4):
+            elif len(self.items["backpacks"]) >= 4:
                 print("You can't carry more backpacks!")
                 return item
             self.items["backpacks"].append(item)
             return None
 
         slot = full_items[str(item.type_of)]
+
+        # if can't equip, can only hold
+        # (potions and scrolls)
+        if slot is None:
+            print(COLORS["cyan"], "Item using is not supported yet.", COLORS["reset"])
+            return self.put_into_backpack(item)
+
+        # I ran out of fucks debugging this
         if (
             self.items[slot] != COLORS["reset"] + " None"
             and self.items[slot] != " None"
             and self.items[slot] != "None"
-            and self.items[slot] != [""]
+            and self.items[slot] != ["None"]
         ):
-            print(f"Slot for {slot} is full!")
+            print(COLORS["red"], f"Slot for {slot} is full!", COLORS["reset"])
             return item
         self.items[slot] = item
         return None
 
     def unequip_item(self, item):
+        result = self.put_into_backpack(item)
+        if result:
+            self.remove_item(item)
+        return self
+
+    def put_into_backpack(self, item):
         if not (
-            self.items["backpacks"][0] == ""
+            self.items["backpacks"] == ["None"]
             or sum([x.empty_slots for x in self.items["backpacks"]]) == 0
         ):
             for i in self.items["backpacks"]:
                 if i.empty_slots > 0:
                     i.add_item(item)
-                    self.remove_item(item)
-                    break
+                    return item
         else:
             print(
                 COLORS["red"]
@@ -138,7 +168,7 @@ Materia: {self.items["materia"]}
                 + COLORS["reset"]
             )
             self.drop_item(item)
-        return self
+            return None
 
     def drop_item(self, item):
         # TODO: floor integration
@@ -151,7 +181,11 @@ Materia: {self.items["materia"]}
         reverse_items = {
             v: k for k, v in self.items.items() if k not in forbidden_types
         }
-        item = reverse_items[item]
+        try:
+            item = reverse_items[item]
+        # the item we try to remove is not an equipment piece
+        except KeyError:
+            return item
         self.items[item] = COLORS["reset"] + " None"
         return item
 
@@ -163,15 +197,13 @@ Materia: {self.items["materia"]}
             ):
                 type_of = reverse_full_items[item]
                 self.equip_item(Item(type_of=type_of))
-        if self.items["backpacks"] == [""]:
+        if self.items["backpacks"] == ["None"]:
             self.equip_item(Backpack())
 
     def empty(self):
         for i in self.items:
             if i in ("backpacks", "materia"):
-                self.items[i] = [""]
-            if i == "guidewatch":
-                continue
+                self.items[i] = ["None"]
             else:
                 self.items[i] = COLORS["reset"] + " None"
 
@@ -180,7 +212,7 @@ Materia: {self.items["materia"]}
         if str(item.type_of) == "backpack":
             item.open_bag()
         else:
-            inv.item_menu(item)
+            self.item_menu(item)
 
     def item_menu(self, item):
         while True:
@@ -189,15 +221,17 @@ Materia: {self.items["materia"]}
             options = ["Unequip Item  ", "Drop Item  ", "Back  "]
             close_menu = ["Unequip Item  ", "Drop Item  ", "Back  "]
             answer = Menu(text, options).answer
+            if answer == "Equip or Use Item  ":
+                self.equip_item(item, inv)
             if answer == "Unequip Item  ":
                 self.unequip_item(item)
-            elif answer == "Drop Item ":
+            elif answer == "Drop Item  ":
                 self.drop_item(item)
             if answer in close_menu:
                 break
 
 
-class Backpack(Item):
+class Backpack(Item, Inventory):
     def __init__(self, name=None, attribute_num=3, attributes=None, slots=8):
         self.name = name
         self.type_of = GeneralAttribute("backpack")
@@ -233,33 +267,74 @@ class Backpack(Item):
 
     def add_item(self, item: Item):
         if str(item.type_of) == "backpack":
-            print("No Bags of Holding!")
+            print(
+                COLORS["red"],
+                "No Bags-of-Holding-Inside-Bags-of-Holding!",
+                COLORS["reset"],
+            )
             return self
-        self.items[item.name] = item
+        self.items[str(item)] = item
         self.empty_slots -= 1
         return self
 
     def equip_item(self, item, inventory_instance):
-        if not inventory_instance.equip_item(item):  # if equipped successfully
-            self.empty_slots += 1
+        if inventory_instance.equip_item(item) is None:  # if equipped successfully
+            self.drop_item(item)
         return self
 
     def unequip_item(self, item):
+        reverse_items = {v: k for k, v in self.items.items()}
+        self.items.pop(reverse_items[item])
         super().drop_item(item)
         self.empty_slots += 1
         return self
+
+    # just an alias for unequip_item()
+    def drop_item(self, item):
+        self.unequip_item(item)
 
     def open_bag(self, item, inventory):
         # item = self
         # Item is as-item representation
         # self is as-inventory representation
-        item.print_description(inventory.guidewatch.level)
-        self.show_inventory()
+        while True:
+            item.print_description(inventory.guidewatch.level)
+            self.show_inventory()
+            answers_to_item = {}
+            options = []
+            if self.empty_slots != self.total_slots:
+                for item_type, item in self.items.items():
+                    answer_text = item
+                    answer_text = hide_color_if_low_lvl(item, inv)
+                    if answer_text != COLORS["reset"] + " None":
+                        options.append(answer_text)
+                        answers_to_item[answer_text] = item
+            options.append("Back  ")
+            text = "r: sort by rarity, t: sort by type, y: sort by name"
+            chosen = Menu(text, options).answer
+            if chosen != "Back  ":
+                self.open_item(answers_to_item[chosen])
+            else:
+                break
+
+    def item_menu(self, item):
+        while True:
+            item.print_description(inv.guidewatch.level)
+            text = ""
+            options = ["Equip or Use Item  ", "Drop Item  ", "Back  "]
+            close_menu = ["Unequip Item  ", "Drop Item  ", "Back  "]
+            answer = Menu(text, options).answer
+            if answer == "Equip or Use Item  ":
+                self.equip_item(item, inv)
+            elif answer == "Drop Item  ":
+                self.drop_item(item)
+            break
 
     def __str__(self):
         return f"{self.name}: {self.total_slots - self.empty_slots}/{self.total_slots}"
 
 
+# TODO: refactor this into the playground
 def fill_inventory():
     inv.fill()
 
@@ -293,7 +368,7 @@ forbidden_types = ["backpacks", "backpack", "materia"]
 
 def inventory_playground():
     while True:
-        # text = "r: sort by rarity, t: sort by type, y: sort by name; e: equip, u: unequip"
+        # chosen = None
         text = ""
         # responses that don't require special treatment
         options = [
@@ -308,6 +383,13 @@ def inventory_playground():
             "Set Guidewatch lvl to 1  ": set_guidewatch_level_to_1,
             "Set Guidewatch level to 100  ": set_guidewatch_level_to_100,
         }
+
+        gen_item_options = [
+            "Equip Generated Item  ",
+            "Put Generated Item Into A Backpack  ",
+        ]
+
+        options.extend(gen_item_options)
         # special responses, need to pass an argument to a func
         answers_to_item = {}
         for item_type, item in inv.items.items():
@@ -320,13 +402,6 @@ def inventory_playground():
                     # answer_text = str
                     # item = Item
                     answers_to_item[answer_text] = item
-            # elif answer_text != [""]:
-            #     full_answer_text = []
-            #     for inner_item_index in range(len(item)):
-            #         answer_text = hide_color_if_low_lvl(item, inv)
-            #         full_answer_text.append(answer_text)
-            #     options.append(full_answer_text)
-            #     answers_to_item[answer_text] = item[inner_item_index]
 
         options.extend(
             ["Take a look at Backpacks  ", "Take a look at Materia  ", "Quit  "]
@@ -335,6 +410,17 @@ def inventory_playground():
 
         inv.show_inventory()
 
+        type_of_gen_item = random.choice(general_attributes)
+        # type_of_gen_item = GeneralAttribute("materia")
+        generated_item = Item(type_of=type_of_gen_item)
+
+        print(
+            COLORS["cyan"],
+            "I generated an item for you:",
+            COLORS["reset"],
+            str(generated_item),
+        )
+
         chosen = Menu(text, options).answer
 
         if chosen in non_variate_responses.keys():
@@ -342,7 +428,7 @@ def inventory_playground():
 
         elif chosen == "Take a look at Backpacks  ":
             # new menu
-            if inv.items["backpacks"] == [""]:
+            if inv.items["backpacks"] == ["None"]:
                 print(COLORS["red"] + "Nothing to look at (yet)!" + COLORS["reset"])
             else:
                 while True:
@@ -362,18 +448,27 @@ def inventory_playground():
 
         elif chosen == "Take a look at Materia  ":
             # same, new menu
-            if inv.items["materia"] == [""]:
+            if inv.items["materia"] == ["None"]:
                 print(COLORS["red"] + "Nothing to look at (yet)!" + COLORS["reset"])
             else:
                 print(COLORS["red"] + "Unimplemented for now, sowwy." + COLORS["reset"])
                 continue
 
+        elif chosen == "Equip Generated Item  ":
+            inv.equip_item(generated_item)
+        elif chosen == "Put Generated Item Into A Backpack  ":
+            inv.put_into_backpack(generated_item)
+
         elif chosen in close_menu:
             break
+
+        elif chosen is None:
+            pass
 
         # special cases
         else:
             inv.open_item(answers_to_item[chosen])
 
 
-inventory_playground()
+if __name__ == "__main__":
+    inventory_playground()
