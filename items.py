@@ -88,16 +88,22 @@ class FunctionalAttribute(Attribute):
         "speed": ("Quick", "Swift"),
         "arcane": ("Arcane", "Cabalistic"),
         "attack": ("Bloodthirsty", "Battle-worn", "Attacking", "Striking"),
+        "vampiric": ("Bloodthirsty", "Vampiric", "Nosferatu"),
+        "taunt": ("Taunting", "Mesmerizing"),
+        "poison": ("Poisonous", "Noxious", "Toxic"),
     }
     suffixes = {
         "fire": ("Ablaze", "Aflame", "of Fire"),
         "ice": ("of Cold", "of Ice", "of Winter"),
         "death": ("of Death", "of Destruction", "of the Deathbringer"),
         "cure": ("of Life", "of Healing"),
-        "defense": ("That Defends", "That Protects"),
+        "defense": ("That Defends", "That Protects", "of Protection"),
         "speed": ("of Swiftness", "of Quickness"),
         "arcane": ("of Occult", "of the Arcane"),
         "attack": ("of the Battle", "of Aggression"),
+        "vampiric": ("of the Dhampyr", "the Health-Stealer"),
+        "taunt": ("that Taunts", "of the Attention-Seeker"),
+        "poison": ("of Venom", "of the Toxin"),
     }
 
     def __init__(self, name):
@@ -122,10 +128,29 @@ functional_attributes = [
 
 
 class Item:
-    def __init__(self, type_of=None, attribute_num=0, attributes=None):
+    def __init__(
+        self,
+        type_of=None,
+        attribute_num=0,
+        attributes=None,
+        att_pwr=0,
+        def_pwr=0,
+        bonus_speed=0,
+        bonus_ev_rating=0,
+        bonus_to_hit=0,
+        att_buffs=[],
+        def_buffs=[],
+    ):
         self.attributes = attributes
         self.attribute_num = attribute_num
         self.type_of = type_of
+        self.att_pwr = att_pwr
+        self.def_pwr = def_pwr
+        self.bonus_speed = bonus_speed
+        self.bonus_ev_rating = bonus_ev_rating
+        self.bonus_to_hit = bonus_to_hit
+        self.att_buffs = att_buffs
+        self.def_buffs = def_buffs
 
         if not type_of:
             self.type_of = random.choice(general_attributes)
@@ -269,19 +294,24 @@ class Item:
 
 
 class Guidewatch:
-    def __init__(self, level):
+    def __init__(self, level=0):
         self.level = level
 
-        options_levels = {
+        self.options_levels = {
             "current_sector": 0,
             "current_floor": 1,
             "current_room": 2,
+            "monster_health_info": 3,
             "use_color": 5,
+            "show_chance_to_hit": 8,
             "show_weather": 10,
+            "self_basic_stats_info": 15,
             "show_properties": 20,
+            "self_advanced_stats_info": 25,
             "constant_info": 30,
             "next_room_sectors": 40,
             "navigate_to_constant": 50,
+            "monster_advanced_stats_info": 60,
         }
 
         params = []

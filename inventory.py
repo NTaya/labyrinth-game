@@ -73,12 +73,12 @@ class Inventory:
                         val = item_contents[inner_item_index]
                         items_list[item] = [None for i in range(len(item_contents))]
                         items_list[item][inner_item_index] = hide_color_if_low_lvl(
-                            val, self
+                            val, self.guidewatch
                         )
             else:
                 val = self.items[item]
                 # delete color if the level of guidewatch is insufficient
-                items_list[item] = hide_color_if_low_lvl(val, self)
+                items_list[item] = hide_color_if_low_lvl(val, self.guidewatch)
         # for key, value in items_list.items():
         #     if isinstance(value, list):
         #         print(key, *value)
@@ -97,12 +97,16 @@ Water pocket: {items_list["right_pocket"]}
         print(text, end="")
         print(
             "Backpacks: ",
-            *[hide_color_if_low_lvl(x, self) for x in self.items["backpacks"]],
+            *[
+                hide_color_if_low_lvl(x, self.guidewatch)
+                for x in self.items["backpacks"]
+            ],
         )
         print("Materia: ", end="")
 
         print(
-            *[hide_color_if_low_lvl(x, self) for x in self.items["materia"]], sep=", "
+            *[hide_color_if_low_lvl(x, self.guidewatch) for x in self.items["materia"]],
+            sep=", ",
         )
         # return text
 
@@ -260,7 +264,7 @@ class Backpack(Item, Inventory):
 
     def show_inventory(self):
         text = "\n* ".join(
-            list([hide_color_if_low_lvl(i, inv) for i in self.items.keys()])
+            list([hide_color_if_low_lvl(i, inv.guidewatch) for i in self.items.keys()])
         )
         text = "* " + text
         print(text)
@@ -317,7 +321,7 @@ class Backpack(Item, Inventory):
             if self.empty_slots != self.total_slots:
                 for item_type, item in self.items.items():
                     answer_text = item
-                    answer_text = hide_color_if_low_lvl(item, inv)
+                    answer_text = hide_color_if_low_lvl(item, inv.guidewatch)
                     if answer_text != COLORS["reset"] + " None":
                         options.append(answer_text)
                         answers_to_item[answer_text] = item
@@ -382,50 +386,50 @@ def back():
 
 
 # -- util --
-
-
-inv = Inventory()
 # most stuff will have special interactions with these items
 forbidden_types = ["backpacks", "backpack", "materia"]
 
 
 def inventory_playground():
+    global inv
+    global forbidden_types
     while True:
         # chosen = None
         text = ""
-        # responses that don't require special treatment
+        # some playground responses
         options = [
             "Fill Inventory  ",
             "Empty Inventory  ",
             "Set Guidewatch lvl to 1  ",
             "Set Guidewatch level to 100  ",
         ]
+        # responses that don't require special treatment
         non_variate_responses = {
             "Fill Inventory  ": fill_inventory,
             "Empty Inventory  ": empty_inventory,
             "Set Guidewatch lvl to 1  ": set_guidewatch_level_to_1,
             "Set Guidewatch level to 100  ": set_guidewatch_level_to_100,
         }
-
+        # item generator
         gen_item_options = [
             "Equip Generated Item  ",
             "Put Generated Item Into A Backpack  ",
         ]
-
+        # this lists the items as options
         options.extend(gen_item_options)
         # special responses, need to pass an argument to a func
         answers_to_item = {}
         for item_type, item in inv.items.items():
             answer_text = item
             if item_type not in forbidden_types:
-                answer_text = hide_color_if_low_lvl(item, inv)
+                answer_text = hide_color_if_low_lvl(item, inv.guidewatch)
                 if answer_text != COLORS["reset"] + " None":
                     options.append(answer_text)
                     # Friendly reminder:
                     # answer_text = str
                     # item = Item
                     answers_to_item[answer_text] = item
-
+        # more buttons
         options.extend(
             ["Take a look at Backpacks  ", "Take a look at Materia  ", "Quit  "]
         )
@@ -456,12 +460,13 @@ def inventory_playground():
             # new menu
             if inv.items["backpacks"] == ["None"]:
                 print(COLORS["red"] + "Nothing to look at (yet)!" + COLORS["reset"])
+                Menu("", ["Continue"])
             else:
                 while True:
                     answers_to_bag = {}
                     for i in range(len(inv.items["backpacks"])):
                         item = inv.items["backpacks"][i]
-                        answer_text = hide_color_if_low_lvl(item, inv)
+                        answer_text = hide_color_if_low_lvl(item, inv.guidewatch)
                         answers_to_bag[answer_text] = inv.items["backpacks"][i]
                     bag_options = list(answers_to_bag.keys())
                     bag_options.append("Close  ")
@@ -476,8 +481,10 @@ def inventory_playground():
             # same, new menu
             if inv.items["materia"] == ["None"]:
                 print(COLORS["red"] + "Nothing to look at (yet)!" + COLORS["reset"])
+                Menu("", ["Continue"])
             else:
                 print(COLORS["red"] + "Unimplemented for now, sowwy." + COLORS["reset"])
+                Menu("", ["Continue"])
                 continue
 
         elif chosen == "Equip Generated Item  ":
@@ -497,4 +504,5 @@ def inventory_playground():
 
 
 if __name__ == "__main__":
+    inv = Inventory()
     inventory_playground()

@@ -65,12 +65,15 @@ class FloorMap:
                 else:
                     text += f"{j: 3}"
             text += "\n"
-        return text
+        print(text)
 
     class Room:
-        def __init__(self, room_id, floor_instance, room_num=0):
+        def __init__(self, room_id, floor_instance, adj_room_num=0, size=None):
             self.floor_instance = floor_instance
             self.room_id = room_id
+            if not size:
+                self.size = np.random.choice(["small", "medium", "large"])
+
             self.position = [x[0] for x in np.where(self.floor_instance.map == room_id)]
             self.position_x = self.position[1]
             self.position_y = self.position[0]
@@ -94,9 +97,9 @@ class FloorMap:
                 "south": False,
             }
 
-            self.room_num = room_num
-            if not room_num:
-                self.room_num = 4
+            self.adj_room_num = adj_room_num
+            if not adj_room_num:
+                self.adj_room_num = 4
                 for i in is_on_edge:
                     if is_on_edge[i]:
                         self.skip[i] = True
@@ -105,10 +108,10 @@ class FloorMap:
                             # double time on edge
                             if is_on_edge[j]:
                                 self.skip[j] = True
-                                self.floor_instance.room_num = 2
+                                self.floor_instance.adj_room_num = 2
                                 break
                             # once on edge
-                            self.floor_instance.room_num = 3
+                            self.floor_instance.adj_room_num = 3
                         break
 
             self.adj_rooms = {
@@ -176,6 +179,15 @@ class FloorMap:
                 for i in self.relative_pos:
                     self.relative_pos[i] = self.adj_rooms[mapping[i]]
             return self.relative_pos
+
+        def show_description(self):
+            print(f"This is a {self.size} room. There's", end=" ")
+            for dir, room in self.relative_pos.items():
+                if room is not None:
+                    print(f"room {room} to the {dir}", end="; ")
+            print(
+                f"{sum([bool(i) for i in self.relative_pos.values() if i is not None])} doors total."
+            )
 
         def move_left(self):
             direction_map = {
@@ -250,40 +262,64 @@ class FloorMap:
             )
 
 
+looking_dir_to_true_dir = {
+    "west": {
+        "west": "south",
+        "east": "north",
+        "north": "west",
+        "south": "east",
+    },
+    "east": {
+        "west": "north",
+        "east": "south",
+        "north": "east",
+        "south": "west",
+    },
+    "south": {
+        "west": "east",
+        "east": "west",
+        "north": "south",
+        "south": "north",
+    },
+    "north": {
+        "west": "west",
+        "east": "east",
+        "north": "north",
+        "south": "south",
+    },
+}
+
 f = FloorMap()
 r = f.Room(0, f)
 
 
+def see_map():
+    print(COLORS["cyan"] + "Player sees this map:" + COLORS["reset"])
+    f.draw_map(as_player_sees=True)
+    print(COLORS["cyan"] + "True map:" + COLORS["reset"])
+    f.draw_map(as_player_sees=False)
+
+
 def map_playground():
-    print(f.draw_map(as_player_sees=True))
+    global r
+    global f
+    options = []
+    converted_dirs = {}
+    for direction, room in r.adj_rooms.items():
+        if room:
+            converted_dirs[looking_dir_to_true_dir[direction][f.direction]] = room
+    see_map()
+    r.show_description()
+    r = r.move_left()
+    see_map()
+    r.show_description()
 
-    def wrapped_move_left():
-        global r
-        r = r.move_left()
-        map_playground()
-
-    def wrapped_move_right():
-        global r
-        r = r.move_right()
-        map_playground()
-
-    def wrapped_move_forward():
-        global r
-        r = r.move_forward()
-        map_playground()
-
-    def wrapped_move_back():
-        global r
-        r = r.move_back()
-        map_playground()
-
-    options = {
-        "← move_left ←": wrapped_move_left,
-        "→ move_right →": wrapped_move_right,
-        "↑ move_forward ↑": wrapped_move_forward,
-        "↓ move_back ↓": wrapped_move_back,
-    }
-
+    extra_options = ["See the entire map", "Quit"]
+    options.extend(extra_options)
     text = ""
 
-    Menu(text, options)
+    # Menu(text, options)
+
+
+if __name__ == "__main__":
+    map_playground()

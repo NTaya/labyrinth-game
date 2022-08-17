@@ -1,4 +1,6 @@
 import typing
+import inventory
+from util import hide_color_if_low_lvl
 from numpy import random
 
 
@@ -12,6 +14,8 @@ class Bodypart:
         "extra eyes": 100,
         "spikes": 50,
         "venom sac": 70,  # also can only be one for now
+        "healing gland": 100,  # same,
+        "lifesucker": 100,  # same
     }
 
     parts_health = {
@@ -23,12 +27,16 @@ class Bodypart:
         "extra eyes": 0,
         "spikes": 0,
         "venom sac": 0,
+        "healing gland": 0,
+        "lifesucker": 0,
     }
 
-    def __init__(self, name, health=0):
+    def __init__(self, name, health=0, att_pwr=0, def_pwr=0):
         self.name = name
         self.max_health = int(health)
         self.current_health = int(health)
+        self.att_pwr = int(att_pwr)
+        self.def_pwr = int(def_pwr)
         # self.descriptors = descriptors
 
     def __str__(self):
@@ -36,29 +44,32 @@ class Bodypart:
 
 
 class IntegratedBodypart(Bodypart):
-    def __init__(self, name, parent, health):
+    def __init__(self, name, parent, health, dmg_pwr=0, def_pwr=0):
         super().__init__(name, health)
         self.parent = parent
 
 
 class Entity:
-    def __init__(self, name: str, body_parts: list[Bodypart]):
+    def __init__(self, name: str, body_parts: list[Bodypart], speed=0, ev_rating=0):
         self.name = name
         self.body_parts = body_parts
+        self.speed = speed
+        self.ev_rating = ev_rating
 
 
 class Player(Entity):
-    def __init__(self):
-        name = "Player"
-        body_parts = [
-            Bodypart("head", 100, None),
-            Bodypart("left arm", 100, None),
-            Bodypart("right arm", 100, None),
-            Bodypart("left leg", 200, None),
-            Bodypart("right leg", 200, None),
-            Bodypart("torso", 400, None),
+    def __init__(self, speed=20, ev_rating=0):
+        self.name = "Player"
+        self.body_parts = [
+            Bodypart("head", health=100, att_pwr=20, def_pwr=15),
+            Bodypart("left arm", health=100, att_pwr=40, def_pwr=15),
+            Bodypart("right arm", health=100, att_pwr=40, def_pwr=15),
+            Bodypart("left leg", health=200, att_pwr=40, def_pwr=30),
+            Bodypart("right leg", health=200, att_pwr=40, def_pwr=30),
+            Bodypart("torso", health=300, att_pwr=0, def_pwr=45),
         ]
-        super().__init__(name, body_parts)
+        self.inventory = inventory.Inventory()
+        super().__init__(self.name, self.body_parts, speed=5, ev_rating=0)
 
 
 class Monster(Entity):
@@ -103,11 +114,16 @@ class Monster(Entity):
         3: ["Monster"],
     }
 
-    def __init__(self, danger_rating, name=None, body_parts=[]):
+    def __init__(self, danger_rating, name=None, body_parts=[], speed=0, ev_rating=0):
         self.danger_rating = danger_rating
         self.danger_class = self.danger_rating // 100
         self.name = name
         self.body_parts = body_parts
+        self.speed = speed
+        self.ev_rating = ev_rating
+        self.bonus_def = 0
+        self.att_buffs = []
+        self.def_buffs = []
 
         if not name:
             self.name = (
@@ -133,8 +149,18 @@ class Monster(Entity):
             resource = self.danger_rating
 
             def get_health(base_health):
-                return base_health * (self.danger_class + 1) + random.normal(
+                return base_health * (self.danger_class + 2) + random.normal(
                     float(base_health) / 6, scale=float(base_health) / 12
+                )
+
+            def get_damage(base_damage):
+                return base_damage * (self.danger_class + 3) + random.normal(
+                    float(base_damage), scale=float(base_damage) / 2
+                )
+
+            def get_defense(base_defense):
+                return base_defense * (self.danger_class + 2) + random.normal(
+                    float(base_defense), scale=float(base_defense) / 2
                 )
 
             head = Bodypart(
@@ -160,6 +186,7 @@ class Monster(Entity):
                     name="wings", health=get_health(Bodypart.parts_health["wings"])
                 )
                 self.body_parts.append(wings)
+                self.speed += 10
                 resource -= Bodypart.parts_costs["wings"]
                 return
             if resource < Bodypart.parts_costs["leg"] * 2:
@@ -170,6 +197,7 @@ class Monster(Entity):
                         name="leg", health=get_health(Bodypart.parts_health["leg"])
                     )
                     self.body_parts.append(leg)
+                    self.speed += 5
                     resource -= Bodypart.parts_costs["leg"]
                     return
 
@@ -280,11 +308,52 @@ class Monster(Entity):
 
         return descrption
 
+    def show_description(
+        self, guidewatch: inventory.Guidewatch, print_text_description=False
+    ):
+        name = self.name
+        body_parts = [x for x in self.body_parts if x.current_health > 0]
+        # body_parts_names = [x.name for x in body_parts]
+        advanced_stats = {
+            "speed": self.speed,
+            "evasion rating": self.ev_rating,
+            "attack buffs": self.att_buffs,
+            "defense buffs": self.def_buffs,
+        }
+        description = self.descrption
+        options_levels = guidewatch.options_levels
+        guidewatch_lvl = guidewatch.level
+
+        # also < monster_health_info
+        if guidewatch_lvl < options_levels["use_color"]:
+            print(hide_color_if_low_lvl(name, guidewatch))
+            for part in body_parts:
+                if part.current_health / part.max_health == 1:
+                    print(f"{part.name}: untouched", end="; ")
+                elif part.current_health / part.max_health >= 0.66:
+                    print(f"{part.name}: slightly battered", end="; ")
+                elif part.current_health / part.max_health >= 0.33:
+                    print(f"{part.name}: damaged", end="; ")
+                elif part.current_health / part.max_health >= 0:
+                    print(f"{part.name}: in terrible shape", end="; ")
+            print()
+
+        elif guidewatch_lvl < options_levels["monster_advanced_stats_info"]:
+            print(name)
+            print(", ".join([str(x) for x in body_parts]))
+
+        else:
+            print(name)
+            print(", ".join([str(x) for x in body_parts]))
+            print(advanced_stats)
+
+        if print_text_description:
+            print(hide_color_if_low_lvl(description, guidewatch))
+
     def __str__(self):
-        return f"""{self.name}
-        {', '.join([x.__str__() for x in self.body_parts if x.current_health > 0])}
-        {self.descrption}"""
+        return self.name
 
 
-print(Monster(danger_rating=random.normal(100, 50)))
+if __name__ == "__main__":
+    print(Monster(danger_rating=random.normal(100, 50)))
 # print(Monster(danger_rating=10))

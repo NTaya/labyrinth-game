@@ -30,12 +30,21 @@ def flatten(S):
     return S[:1] + flatten(S[1:])
 
 
+# -- GAMEPLAY --
+
+
+def game_over():
+    print("Game Over")
+    # TODO: delete save file, exit to main menu
+    quit()
+
+
 # -- ITEM --
 
 
-def hide_color_if_low_lvl(item_name, inventory):
+def hide_color_if_low_lvl(item_name, guidewatch):
     return (
         COLORS["reset"] + " " + str(item_name)[5:]
-        if inventory.guidewatch.level < 5
+        if guidewatch.level < guidewatch.options_levels["use_color"]
         else str(item_name)
     )
