@@ -212,7 +212,7 @@ def battle_playground():
                 [part for part in player.body_parts if part.current_health > 0]
             )
             print(
-                f"Monster targets {player.name}'s {target_part} with its {attacking_part}!"
+                f"Monster targets {player.name}'s {target_part.name} with its {attacking_part.name}!"
             )
             options = ["Defend", "Evade"]
             answer = Menu("", options).answer
@@ -347,20 +347,64 @@ def battle_playground():
                 options.append("Back")
                 answer = Menu("", options).answer
 
-                target_part = enemy_body_parts[answer]
-                def_pwr = target_part.def_pwr + monster.bonus_def
-                attack_phase = Attack(
-                    monster, player, target_part, attacking_part, att_pwr, def_pwr
-                )
-                attack_phase.attack()
+                if answer == "Back":
+                    turn -= 1
+                else:
+                    target_part = enemy_body_parts[answer]
+                    def_pwr = target_part.def_pwr + monster.bonus_def
+                    attack_phase = Attack(
+                        monster, player, target_part, attacking_part, att_pwr, def_pwr
+                    )
+                    attack_phase.attack()
+
+            # attack with non-hands
+            else:
+                # option = f"Attack with your {option}"
+                attacking_part = answer.split("Attack with your ")[1]
+                body_part = [x for x in player.body_parts if x.name == attacking_part][
+                    0
+                ]
+                if attacking_part in ("left leg", "right leg"):
+                    weapon = player.inventory.items["pants"]
+                else:
+                    weapon = player.inventory.items[attacking_part]
+                att_pwr = body_part.att_pwr
+                if weapon != COLORS["reset"] + " None":
+                    att_pwr += weapon.att_pwr
+                    attacking_part = weapon
+
+                options = []
+                enemy_body_parts = {x.name: x for x in monster.body_parts}
+                for part_name, part in enemy_body_parts.items():
+                    if part.current_health <= 0:
+                        continue
+                    option = f"Target {part_name}"
+                    guidewatch = player.inventory.guidewatch
+                    if (
+                        guidewatch.level
+                        >= guidewatch.options_levels["show_chance_to_hit"]
+                    ):
+                        chance_to_hit = min(
+                            0.5
+                            + part.max_health
+                            / sum([x.max_health for x in monster.body_parts]),
+                            1,
+                        )
+                        option += f" (chance: {int(chance_to_hit * 100)}%)"
+                    options.append(option)
+                    enemy_body_parts[option] = enemy_body_parts.pop(part_name)
+                options.append("Back")
+                answer = Menu("", options).answer
 
                 if answer == "Back":
                     turn -= 1
                 else:
-                    pass
-
-            else:
-                pass
+                    target_part = enemy_body_parts[answer]
+                    def_pwr = target_part.def_pwr + monster.bonus_def
+                    attack_phase = Attack(
+                        monster, player, target_part, attacking_part, att_pwr, def_pwr
+                    )
+                    attack_phase.attack()
 
             if all([part.current_health <= 0 for part in monster.body_parts]):
                 print("You won!")

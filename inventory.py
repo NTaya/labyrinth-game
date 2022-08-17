@@ -18,6 +18,7 @@ full_items = {
     "bow": "hands",
     "handgun": "hands",
     "rifle": "hands",
+    "helmet": "head",
     "jacket": "jacket",
     "cape": "cape",
     "pants": "pants",
@@ -32,6 +33,7 @@ full_items = {
 }
 
 reverse_full_items = {
+    "head": GeneralAttribute("helmet"),
     "hands": GeneralAttribute("sword"),
     "jacket": GeneralAttribute("jacket"),
     "cape": GeneralAttribute("cape"),
@@ -48,6 +50,7 @@ class Inventory:
         self.guidewatch = Guidewatch(0)
         self.items = {
             "hands": COLORS["reset"] + " None",
+            "head": COLORS["reset"] + " None",
             "jacket": COLORS["reset"] + " None",
             "cape": COLORS["reset"] + " None",
             "pants": COLORS["reset"] + " None",

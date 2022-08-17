@@ -164,7 +164,10 @@ class Monster(Entity):
                 )
 
             head = Bodypart(
-                name="head", health=get_health(Bodypart.parts_health["head"])
+                name="head",
+                health=get_health(Bodypart.parts_health["head"]),
+                att_pwr=get_damage(Bodypart.parts_costs["head"] * 3),
+                def_pwr=get_defense(Bodypart.parts_costs["head"] * 2),
             )
             self.body_parts.append(head)
             resource -= Bodypart.parts_costs["head"]
@@ -172,7 +175,10 @@ class Monster(Entity):
             if resource < Bodypart.parts_costs["torso"]:
                 return
             torso = Bodypart(
-                name="torso", health=get_health(Bodypart.parts_health["torso"])
+                name="torso",
+                health=get_health(Bodypart.parts_health["torso"]),
+                att_pwr=get_damage(Bodypart.parts_costs["torso"] * 3),
+                def_pwr=get_defense(Bodypart.parts_costs["torso"] * 2),
             )
             self.body_parts.append(torso)
             resource -= Bodypart.parts_costs["torso"]
@@ -183,7 +189,10 @@ class Monster(Entity):
                 Bodypart.parts_costs["wings"] + Bodypart.parts_costs["leg"]
             ):
                 wings = Bodypart(
-                    name="wings", health=get_health(Bodypart.parts_health["wings"])
+                    name="wings",
+                    health=get_health(Bodypart.parts_health["wings"]),
+                    att_pwr=get_damage(Bodypart.parts_costs["wings"] * 3),
+                    def_pwr=get_defense(Bodypart.parts_costs["wings"] * 2),
                 )
                 self.body_parts.append(wings)
                 self.speed += 10
@@ -194,7 +203,10 @@ class Monster(Entity):
                     return
                 else:
                     leg = Bodypart(
-                        name="leg", health=get_health(Bodypart.parts_health["leg"])
+                        name="leg",
+                        health=get_health(Bodypart.parts_health["leg"]),
+                        att_pwr=get_damage(Bodypart.parts_costs["leg"] * 3),
+                        def_pwr=get_defense(Bodypart.parts_costs["leg"] * 2),
                     )
                     self.body_parts.append(leg)
                     self.speed += 5
