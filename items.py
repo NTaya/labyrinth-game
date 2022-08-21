@@ -94,6 +94,7 @@ class FunctionalAttribute(Attribute):
         "vampiric": ("Bloodthirsty", "Vampiric", "Nosferatu"),
         "taunt": ("Taunting", "Mesmerizing"),
         "poison": ("Poisonous", "Noxious", "Toxic"),
+        "regeneration": ("Restorative", "Regenerating"),
     }
     suffixes = {
         "fire": ("Ablaze", "Aflame", "of Fire"),
@@ -107,6 +108,7 @@ class FunctionalAttribute(Attribute):
         "vampiric": ("of the Dhampyr", "the Health-Stealer"),
         "taunt": ("that Taunts", "of the Attention-Seeker"),
         "poison": ("of Venom", "of the Toxin"),
+        "regeneration": ("of Regeneration", "that Sustains"),
     }
 
     def __init__(self, name):
@@ -127,12 +129,33 @@ functional_attributes = [
     "speed",
     "arcane",
     "attack",
+    "vampiric",
+    "taunt",
+    "poison",
+    "regeneration",
 ]
+
+att_or_def_func_attributes = {
+    "att": ("fire", "ice", "death", "speed", "arcane", "attack", "vampiric", "poison"),
+    "def": (
+        "fire",
+        "ice",
+        "death",
+        "cure",
+        "defense",
+        "speed",
+        "arcane",
+        "taunt",
+        "poison",
+        "regeneration",
+    ),
+}
 
 
 class Item:
     def __init__(
         self,
+        name=None,
         type_of=None,
         attribute_num=0,
         attributes=None,
@@ -143,6 +166,8 @@ class Item:
         bonus_to_hit=0,
         att_buffs=[],
         def_buffs=[],
+        att_debuffs=[],
+        def_debuffs=[],
     ):
         self.attributes = attributes
         self.attribute_num = attribute_num
@@ -154,6 +179,8 @@ class Item:
         self.bonus_to_hit = bonus_to_hit
         self.att_buffs = att_buffs
         self.def_buffs = def_buffs
+        self.att_debuffs = att_debuffs
+        self.def_debuffs = def_debuffs
 
         if not type_of:
             self.type_of = random.choice(general_attributes)
@@ -190,8 +217,16 @@ class Item:
             self.attributes = random.choice(
                 functional_attributes, self.attribute_num, replace=False
             )
+            for attr in self.attributes:
+                if attr in att_or_def_func_attributes["att"]:
+                    self.att_buffs.append(attr)
+                    self.att_pwr += np.random.normal(5, 5)
+                if attr in att_or_def_func_attributes["def"]:
+                    self.def_buffs.append(attr)
+                    self.def_pwr += np.random.normal(5, 5)
 
-        self.name = self.get_name()
+        if name is None:
+            self.name = self.get_name()
 
     def get_name(self):
         rarities = {

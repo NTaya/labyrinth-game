@@ -1,6 +1,6 @@
 import typing
 import inventory
-from util import hide_color_if_low_lvl
+from util import hide_color_if_low_lvl, COLORS
 from numpy import random
 
 
@@ -31,8 +31,21 @@ class Bodypart:
         "lifesucker": 0,
     }
 
-    def __init__(self, name, health=0, att_pwr=0, def_pwr=0):
+    def __init__(self, name, inventory_name=None, health=0, att_pwr=0, def_pwr=0):
         self.name = name
+        if inventory_name is None:
+            if self.name == "left arm" or self.name == "right arm":
+                self.inventory_name = "hands"
+            elif self.name == "left leg" or self.name == "right leg":
+                self.inventory_name = "pants"
+            elif self.name == "torso":
+                self.inventory_name = "jacket"
+
+            else:
+                self.inventory_name = name
+        else:
+            self.inventory_name = inventory_name
+
         self.max_health = int(health)
         self.current_health = int(health)
         self.att_pwr = int(att_pwr)
@@ -154,8 +167,10 @@ class Monster(Entity):
                 )
 
             def get_damage(base_damage):
-                return base_damage * (self.danger_class + 3) + random.normal(
-                    float(base_damage), scale=float(base_damage) / 2
+                return (
+                    base_damage * (self.danger_class + 3)
+                    + random.normal(float(base_damage), scale=float(base_damage) / 2)
+                    * 1.5
                 )
 
             def get_defense(base_defense):
@@ -166,8 +181,8 @@ class Monster(Entity):
             head = Bodypart(
                 name="head",
                 health=get_health(Bodypart.parts_health["head"]),
-                att_pwr=get_damage(Bodypart.parts_costs["head"] * 3),
-                def_pwr=get_defense(Bodypart.parts_costs["head"] * 2),
+                att_pwr=get_damage(Bodypart.parts_costs["head"]),
+                def_pwr=get_defense(Bodypart.parts_costs["head"]),
             )
             self.body_parts.append(head)
             resource -= Bodypart.parts_costs["head"]
@@ -177,8 +192,8 @@ class Monster(Entity):
             torso = Bodypart(
                 name="torso",
                 health=get_health(Bodypart.parts_health["torso"]),
-                att_pwr=get_damage(Bodypart.parts_costs["torso"] * 3),
-                def_pwr=get_defense(Bodypart.parts_costs["torso"] * 2),
+                att_pwr=0,
+                def_pwr=get_defense(Bodypart.parts_costs["torso"]),
             )
             self.body_parts.append(torso)
             resource -= Bodypart.parts_costs["torso"]
@@ -191,8 +206,8 @@ class Monster(Entity):
                 wings = Bodypart(
                     name="wings",
                     health=get_health(Bodypart.parts_health["wings"]),
-                    att_pwr=get_damage(Bodypart.parts_costs["wings"] * 3),
-                    def_pwr=get_defense(Bodypart.parts_costs["wings"] * 2),
+                    att_pwr=get_damage(Bodypart.parts_costs["wings"]),
+                    def_pwr=get_defense(Bodypart.parts_costs["wings"]),
                 )
                 self.body_parts.append(wings)
                 self.speed += 10
@@ -205,8 +220,8 @@ class Monster(Entity):
                     leg = Bodypart(
                         name="leg",
                         health=get_health(Bodypart.parts_health["leg"]),
-                        att_pwr=get_damage(Bodypart.parts_costs["leg"] * 3),
-                        def_pwr=get_defense(Bodypart.parts_costs["leg"] * 2),
+                        att_pwr=get_damage(Bodypart.parts_costs["leg"]),
+                        def_pwr=get_defense(Bodypart.parts_costs["leg"]),
                     )
                     self.body_parts.append(leg)
                     self.speed += 5
@@ -233,14 +248,14 @@ class Monster(Entity):
         if not body_parts:
             buy_self()
 
-        self.descrption = self.create_description()
+        self.descrption = None
 
         # super().__init__(name, body_parts)
 
-    def create_description(self):
+    def create_description(self, guidewatch):
         unique_descriptions = {
             ("head",): [
-                f"{self.name} is just a rolling head that really wants to take a bite of you.",
+                f"{hide_color_if_low_lvl(self.name, guidewatch)} is just a rolling head that really wants to take a bite of you.",
                 f"This is a head that somehow floats in the air but doesn't seem to be moving otherwise",
             ],
             ("head", "torso"): [
@@ -251,14 +266,14 @@ class Monster(Entity):
                 f"This monster is Beholder-ish in appearance, except there are wings instead of extra eyes.",
                 f"Before you is a head that's awkwardly flying around.",
                 f"This is basically a Cacodemon, except it uses wings to fly.",
-                f"How many monsters does it take to screw in a lightbulb? One more than {self.name}, since that one doesn't have any limbs.",
+                f"How many monsters does it take to screw in a lightbulb? One more than {hide_color_if_low_lvl(self.name, guidewatch)}, since that one doesn't have any limbs.",
             ],
             ("head", "torso", "leg"): [
                 f"This monster is a head hopping around on a single leg. What an achievement in locomotion!",
                 f"It's a head propped hilariously by a single leg. Nevertheless, it can and will try to bite/claw you.",
             ],
             ("head", "torso", "leg", "leg", "leg"): [
-                f"{self.name} is tri-pedal.",
+                f"{hide_color_if_low_lvl(self.name, guidewatch)} is tri-pedal.",
                 f"This monster is triangular in shape, which is surely helped by its three legs.",
             ],
         }
@@ -273,6 +288,7 @@ class Monster(Entity):
             body_parts_names = tuple(sorted([x.name for x in self.body_parts]))
 
         descrption = ""
+        descrption += COLORS["reset"]
 
         # uniques
         if body_parts_names in unique_descriptions:
@@ -283,8 +299,8 @@ class Monster(Entity):
             head_descr = [
                 f"It has an elongated, canine-like head.",
                 f"The monester's head is rather large for its torso.",
-                f"{self.name} has a small, lizard-like head with bulging eyes.",
-                f"{self.name}'s enormously huge eyes pierce into your soul.",
+                f"{hide_color_if_low_lvl(self.name, guidewatch)} has a small, lizard-like head with bulging eyes.",
+                f"{hide_color_if_low_lvl(self.name, guidewatch)}'s enormously huge eyes pierce into your soul.",
                 f"This monster has a feline-like head, and it twitches its ears ever so often.",
             ]
             descrption += random.choice(head_descr) + " "
@@ -310,11 +326,19 @@ class Monster(Entity):
                 leg_descr = [f"It's single-legged.", f"The monster has only one limb."]
                 descrption += random.choice(leg_descr) + " "
 
+        # TODO: descrption of two legs
+        # TODO: description of three legs
+        # TODO: description of four legs
+        # TODO: description of more legs
+        # TODO: description of one (pair of) wings
+        # TODO: description of two+ pairs of wings
+        # TODO: description for the rest
+
         if descrption.strip() == "":
             descrs = [
                 f"This sure is a monster.",
-                f"The {self.name} is quite a monster.",
-                f"{self.name} is fairly typical for a monster.",
+                f"The {hide_color_if_low_lvl(self.name, guidewatch)} is quite a monster.",
+                f"{hide_color_if_low_lvl(self.name, guidewatch)} is fairly typical for a monster.",
             ]
             descrption = random.choice(descrs)
 
@@ -332,7 +356,10 @@ class Monster(Entity):
             "attack buffs": self.att_buffs,
             "defense buffs": self.def_buffs,
         }
+        if self.descrption is None:
+            self.descrption = self.create_description(guidewatch)
         description = self.descrption
+        description = COLORS["reset"] + " " + description + " " + COLORS["reset"]
         options_levels = guidewatch.options_levels
         guidewatch_lvl = guidewatch.level
 

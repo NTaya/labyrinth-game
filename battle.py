@@ -2,7 +2,7 @@ from inventory import Inventory
 from items import Item
 from entity import Entity, Bodypart, Monster, Player
 from menu import Menu
-from util import COLORS, hide_color_if_low_lvl
+from util import COLORS, hide_color_if_low_lvl, game_over
 from typing import Union
 import numpy as np
 
@@ -132,12 +132,28 @@ class Defense(Attack):
         self.target_part.current_health -= int(self.att_pwr)
 
         # attack buffs
+        if "fire" in self.att_buffs:
+            possible_narration = [
+                f"{self.attacker}'s {self.attacking_part.name} burns {self.defender}'s {self.target_part.name}!"
+                f"{self.attacker}'s {self.attacking_part.name} sets {self.defender}'s {self.target_part.name} on fire.",
+            ]
+            print(np.random.choice(possible_narration))
+            if "fire" in self.def_buffs:
+                self.defending_part.def_debuffs.append("fire_weak")
+            else:
+                self.defending_part.def_debuffs.append("fire")
+
         if "vampiric" in self.att_buffs:
-            heal_strength = self.att_buffs / 2 + self.def_buffs / 2
+            heal_strength = self.att_pwr / 8
             if (
                 self.attacking_part.max_health - self.attacking_part.current_health
                 >= heal_strength
             ):
+                possible_narration = [
+                    f"{self.attacker}'s {self.attacking_part.name} restored a bit of health from the attack!",
+                    f"{self.attacker}'s {self.attacking_part.name} feeds on {self.defender}'s {self.target_part.name} pain.",
+                ]
+                print(np.random.choice(possible_narration))
                 heal_part(self.attacking_part, heal_strength)
             else:
                 parts_missing_health = {}
@@ -146,6 +162,11 @@ class Defense(Attack):
                         self.target_part.max_health - self.target_part.current_health
                     )
                 # find the most damaged part
+                possible_narration = [
+                    f"{self.attacker}'s {self.attacking_part.name} restored a bit of health of their whole body.",
+                    f"{self.attacker}'s {self.attacking_part.name} fed their body on {self.defender}'s {self.target_part.name} pain.",
+                ]
+                print(np.random.choice(possible_narration))
                 heal_part(
                     max(parts_missing_health, key=parts_missing_health.get),
                     heal_strength,
@@ -155,7 +176,9 @@ class Defense(Attack):
 
         # health check
         if self.target_part.current_health <= 0:
-            if self.target_part.name == "head" or self.target_part.name == "torso":
+            if (
+                self.target_part.name == "head" or self.target_part.name == "torso"
+            ) and isinstance(self.defender, Player):
                 game_over()
             self.target_part.current_health = 0
             return 0
@@ -199,6 +222,11 @@ def battle_playground():
     show_inventory = False
     show_monster_description = True
     show_non_hands = True
+    target_part = np.random.choice(
+        [x for x in monster.body_parts if x.current_health > 0]
+    )
+    curr_health = target_part.current_health
+    guidewatch = player.inventory.guidewatch
 
     while True:
         print(f"\nTurn {turn}.")
@@ -206,7 +234,11 @@ def battle_playground():
         if turn % 2:
             print(f"{COLORS['cyan']} Monster's turn. {COLORS['reset']}")
             attacking_part = np.random.choice(
-                [part for part in monster.body_parts if part.current_health > 0]
+                [
+                    part
+                    for part in monster.body_parts
+                    if part.current_health > 0 and part.name != "torso"
+                ]
             )
             target_part = np.random.choice(
                 [part for part in player.body_parts if part.current_health > 0]
@@ -233,6 +265,26 @@ def battle_playground():
         # if player's turn
         else:
             print(f"{COLORS['cyan']} {player.name}'s turn. {COLORS['reset']}")
+            print("Player's health: ")
+            for part in player.body_parts:
+                print(part, end=", ")
+                if (
+                    guidewatch.level
+                    >= guidewatch.options_levels["self_basic_stats_info"]
+                ):
+                    equipment = player.inventory.items[part.inventory_name]
+                    if equipment != COLORS["reset"] + " None":
+                        print(
+                            f"att_pwr: {part.att_pwr + equipment.att_pwr}, def_pwr: {part.def_pwr + equipment.def_pwr}",
+                            end="; ",
+                        )
+
+                    else:
+                        print(
+                            f"att_pwr: {part.att_pwr}, def_pwr: {part.def_pwr}",
+                            end="; ",
+                        )
+                print()
             monster.show_description(
                 player.inventory.guidewatch,
                 print_text_description=show_monster_description,
@@ -251,6 +303,7 @@ def battle_playground():
                 "Set guidewatch_lvl to 3",
                 "Set guidewatch_lvl to 100",
                 "Give self a random weapon",
+                "Fill self inventory with random items",
             ]
 
             options.extend(base_options)
@@ -265,13 +318,16 @@ def battle_playground():
                     if show_non_hands:
                         options.append(f"Attack with your {option}")
                 else:
-                    if not hands_in_options:
+                    if not hands_in_options and (
+                        "left arm" in body_part_options.keys()
+                        or "right arm" in body_part_options.keys()
+                    ):
                         weapon = player.inventory.items["hands"]
                         if weapon == COLORS["reset"] + " None":
                             options.append("Attack with your bare hands")
                         else:
                             options.append(
-                                f"Attack with {hide_color_if_low_lvl(weapon, player.inventory.guidewatch)}"
+                                f"Attack with {hide_color_if_low_lvl(weapon, guidewatch)}"
                             )
                         hands_in_options = True
 
@@ -285,20 +341,19 @@ def battle_playground():
                 answer
                 == COLORS["cyan"] + "Show/hide att other than w/hands" + COLORS["reset"]
             ):
-                print("henlo")
                 show_non_hands ^= True
                 turn -= 1
 
             elif answer == "Set guidewatch_lvl to 0":
-                player.inventory.guidewatch.level = 0
+                guidewatch.level = 0
                 turn -= 1
 
             elif answer == "Set guidewatch_lvl to 3":
-                player.inventory.guidewatch.level = 3
+                guidewatch.level = 3
                 turn -= 1
 
             elif answer == "Set guidewatch_lvl to 100":
-                player.inventory.guidewatch.level = 100
+                guidewatch.level = 100
                 turn -= 1
 
             elif (
@@ -406,7 +461,10 @@ def battle_playground():
                     )
                     attack_phase.attack()
 
-            if all([part.current_health <= 0 for part in monster.body_parts]):
+            if all([part.current_health <= 0 for part in monster.body_parts]) or (
+                (target_part.name == "head" or target_part.name == "torso")
+                and target_part.current_health <= 0
+            ):
                 print("You won!")
                 quit()
             turn += 1
