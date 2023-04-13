@@ -1,7 +1,9 @@
 import typing
+from items import att_or_def_func_attributes
 import inventory
 from util import hide_color_if_low_lvl, COLORS
-from numpy import random
+from numpy import random, ndarray
+from collections import defaultdict
 
 
 class Bodypart:
@@ -31,7 +33,18 @@ class Bodypart:
         "lifesucker": 0,
     }
 
-    def __init__(self, name, inventory_name=None, health=0, att_pwr=0, def_pwr=0):
+    def __init__(
+        self,
+        name,
+        inventory_name=None,
+        health=0,
+        att_pwr=0,
+        def_pwr=0,
+        att_buffs=None,
+        def_buffs=None,
+        att_debuffs=None,
+        def_debuffs=None,
+    ):
         self.name = name
         if inventory_name is None:
             if self.name == "left arm" or self.name == "right arm":
@@ -50,6 +63,22 @@ class Bodypart:
         self.current_health = int(health)
         self.att_pwr = int(att_pwr)
         self.def_pwr = int(def_pwr)
+        if att_buffs is None:
+            self.att_buffs = list()
+        else:
+            self.att_buffs = att_buffs
+        if def_buffs is None:
+            self.def_buffs = list()
+        else:
+            self.def_buffs = def_buffs
+        if att_debuffs is None:
+            self.att_debuffs = defaultdict(int)
+        else:
+            self.att_debuffs = att_debuffs
+        if def_debuffs is None:
+            self.def_debuffs = defaultdict(int)
+        else:
+            self.def_debuffs = def_debuffs
         # self.descriptors = descriptors
 
     def __str__(self):
@@ -108,6 +137,8 @@ class Monster(Entity):
             "Heinous",
             "Crude",
             "Corpselike",
+            "Revolting",
+            "Beastly",
         ],
         2: [
             "Weird",
@@ -118,7 +149,10 @@ class Monster(Entity):
             "Corpselike",
             "Alien",
         ],
-        3: ["Frightening", "Horrifying"],
+        3: [
+            "Frightening",
+            "Horrifying",
+        ],
     }
     suffixes = {
         0: ["Thing", "Creature", "Vermin", "Monster"],
@@ -247,6 +281,31 @@ class Monster(Entity):
 
         if not body_parts:
             buy_self()
+        else:
+            self.body_parts = body_parts
+
+        for part in self.body_parts:
+            num_att_attributes = random.randint(0, self.danger_class + 2)
+            if num_att_attributes > 0:
+                part.att_buffs.extend(
+                    random.choice(
+                        att_or_def_func_attributes["att"], num_att_attributes
+                    ).tolist()
+                )
+
+            num_def_attributes = random.randint(0, self.danger_class + 2)
+            if num_def_attributes > 0:
+                part.def_buffs.extend(
+                    random.choice(
+                        att_or_def_func_attributes["def"], num_def_attributes
+                    ).tolist()
+                )
+
+        for part in self.body_parts:
+            if isinstance(part.att_buffs, ndarray):
+                part.att_buffs = part.att_buffs.tolist()
+            if isinstance(part.def_buffs, ndarray):
+                part.def_buffs = part.def_buffs.tolist()
 
         self.descrption = None
 
@@ -322,8 +381,8 @@ class Monster(Entity):
                     f"It has only one limb, but god forbid you get in the swiping range of said limb.",
                 ]
                 descrption += random.choice(leg_descr) + " "
-            elif random.random() > 0.2:
-                leg_descr = [f"It's single-legged.", f"The monster has only one limb."]
+            elif random.random() > 0.3:
+                leg_descr = [f"It's single-limbed.", f"The monster has only one limb."]
                 descrption += random.choice(leg_descr) + " "
 
         # TODO: descrption of two legs
@@ -365,7 +424,10 @@ class Monster(Entity):
 
         # also < monster_health_info
         if guidewatch_lvl < options_levels["use_color"]:
-            print(hide_color_if_low_lvl(name, guidewatch))
+            print(
+                hide_color_if_low_lvl(name, guidewatch),
+                f" - class: {self.danger_class}",
+            )
             for part in body_parts:
                 if part.current_health / part.max_health == 1:
                     print(f"{part.name}: untouched", end="; ")
@@ -379,11 +441,25 @@ class Monster(Entity):
 
         elif guidewatch_lvl < options_levels["monster_advanced_stats_info"]:
             print(name)
-            print(", ".join([str(x) for x in body_parts]))
+            for x in body_parts:
+                print(
+                    str(x),
+                    f"buffs: {x.att_buffs + x.def_buffs}",
+                    f"debuffs: {list(x.att_debuffs.keys()) + list(x.def_debuffs.keys())}",
+                    end=";\n",
+                    sep=", ",
+                )
 
         else:
             print(name)
-            print(", ".join([str(x) for x in body_parts]))
+            for x in body_parts:
+                print(
+                    str(x),
+                    f"buffs: {x.att_buffs + x.def_buffs}",
+                    f"debuffs: {list(x.att_debuffs.keys()) + list(x.def_debuffs.keys())}",
+                    end=";\n",
+                    sep=", ",
+                )
             print(advanced_stats)
 
         if print_text_description:

@@ -1,5 +1,6 @@
 from numpy import random
 from util import COLORS
+from collections import defaultdict
 
 
 class Attribute:
@@ -95,6 +96,11 @@ class FunctionalAttribute(Attribute):
         "taunt": ("Taunting", "Mesmerizing"),
         "poison": ("Poisonous", "Noxious", "Toxic"),
         "regeneration": ("Restorative", "Regenerating"),
+        "corruption": (
+            "C̷̼̹̻̲̒͒̉̀o̸͙͚̯̘̞͑͊̎ŗ̶̞̖̘̈r̵̞̭͆̈́̐̇u̷̹̘̩̳̔́p̷̞̳̪̀̍t̵͎͂ͅę̸̣̂̉d̵̢̠͌",
+            "Corrupted",
+            "Eldritch",
+        ),
     }
     suffixes = {
         "fire": ("Ablaze", "Aflame", "of Fire"),
@@ -109,16 +115,12 @@ class FunctionalAttribute(Attribute):
         "taunt": ("that Taunts", "of the Attention-Seeker"),
         "poison": ("of Venom", "of the Toxin"),
         "regeneration": ("of Regeneration", "that Sustains"),
+        "corruption": ("of Corruption", "of the Eldritch"),
     }
 
     def __init__(self, name):
         super().__init__(name)
 
-
-# functional_attributes = [
-#     FunctionalAttribute(item)
-#     for item in ["fire", "ice", "death", "cure", "defense", "speed", "arcane"]
-# ]
 
 functional_attributes = [
     "fire",
@@ -133,10 +135,21 @@ functional_attributes = [
     "taunt",
     "poison",
     "regeneration",
+    "corruption",
 ]
 
 att_or_def_func_attributes = {
-    "att": ("fire", "ice", "death", "speed", "arcane", "attack", "vampiric", "poison"),
+    "att": (
+        "fire",
+        "ice",
+        "death",
+        "speed",
+        "arcane",
+        "attack",
+        "vampiric",
+        "poison",
+        "corruption",
+    ),
     "def": (
         "fire",
         "ice",
@@ -144,6 +157,7 @@ att_or_def_func_attributes = {
         "cure",
         "defense",
         "speed",
+        "arcane",
         "arcane",
         "taunt",
         "poison",
@@ -164,10 +178,10 @@ class Item:
         bonus_speed=0,
         bonus_ev_rating=0,
         bonus_to_hit=0,
-        att_buffs=[],
-        def_buffs=[],
-        att_debuffs=[],
-        def_debuffs=[],
+        att_buffs=None,
+        def_buffs=None,
+        att_debuffs=None,  # name : length in turns
+        def_debuffs=None,
     ):
         self.attributes = attributes
         self.attribute_num = attribute_num
@@ -177,10 +191,22 @@ class Item:
         self.bonus_speed = bonus_speed
         self.bonus_ev_rating = bonus_ev_rating
         self.bonus_to_hit = bonus_to_hit
-        self.att_buffs = att_buffs
-        self.def_buffs = def_buffs
-        self.att_debuffs = att_debuffs
-        self.def_debuffs = def_debuffs
+        if att_buffs is None:
+            self.att_buffs = list()
+        else:
+            self.att_buffs = att_buffs
+        if def_buffs is None:
+            self.def_buffs = list()
+        else:
+            self.def_buffs = def_buffs
+        if att_debuffs is None:
+            self.att_debuffs = defaultdict(int)
+        else:
+            self.att_debuffs = att_debuffs
+        if def_debuffs is None:
+            self.def_debuffs = defaultdict(int)
+        else:
+            self.def_debuffs = def_debuffs
 
         if not type_of:
             self.type_of = random.choice(general_attributes)
@@ -220,10 +246,11 @@ class Item:
             for attr in self.attributes:
                 if attr in att_or_def_func_attributes["att"]:
                     self.att_buffs.append(attr)
-                    self.att_pwr += np.random.normal(5, 5)
+                    self.att_pwr += int(random.normal(6, 6))
                 if attr in att_or_def_func_attributes["def"]:
                     self.def_buffs.append(attr)
-                    self.def_pwr += np.random.normal(5, 5)
+                    self.def_pwr += int(random.normal(5, 5))
+            print(f"DEBUG:", self.att_buffs)
 
         if name is None:
             self.name = self.get_name()
